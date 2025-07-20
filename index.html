@@ -63,9 +63,13 @@
         },
         body: JSON.stringify({ question, location, localTime })
       });
-
-      const result = await response.json();
-      document.getElementById("responseArea").innerText = JSON.stringify(result, null, 2);
+      try {
+  const result = await response.json();
+  document.getElementById("responseArea").innerText = JSON.stringify(result, null, 2);
+} catch (err) {
+  document.getElementById("responseArea").innerText = "Failed to parse response. Check API.";
+  console.error("Response error:", err);
+}
     });
   </script>
 </body>
