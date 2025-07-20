@@ -1,0 +1,72 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GuruKP Prediction Tool</title>
+</head>
+<body>
+  <h2>GuruKP Prediction Tool</h2>
+
+  <form id="predictionForm">
+    <label>Question:</label><br>
+    <input type="text" id="question" name="question" required /><br><br>
+
+    <label>Location:</label><br>
+    <input type="text" id="location" name="location" readonly /><br><br>
+
+    <label>Local Time:</label><br>
+    <input type="text" id="localTime" name="localTime" readonly /><br><br>
+
+    <button type="submit">Get Guidance</button>
+  </form>
+
+  <div id="responseArea" style="margin-top:20px; white-space: pre-wrap;"></div>
+
+  <script>
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+          const data = await response.json();
+          document.getElementById("location").value = data.address.city || data.address.town || data.address.state || "Unknown";
+        });
+      } else {
+        document.getElementById("location").value = "Geolocation not supported";
+      }
+    }
+
+    function getLocalTime() {
+      const now = new Date();
+      document.getElementById("localTime").value = now.toLocaleString();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      getLocation();
+      getLocalTime();
+    });
+
+    document.getElementById("predictionForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const question = document.getElementById("question").value;
+      const location = document.getElementById("location").value;
+      const localTime = document.getElementById("localTime").value;
+
+      const response = await fetch("https://gurukp-love.onrender.com/predict", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ question, location, localTime })
+      });
+
+      const result = await response.json();
+      document.getElementById("responseArea").innerText = JSON.stringify(result, null, 2);
+    });
+  </script>
+</body>
+</html>
