@@ -12,11 +12,8 @@
     <label>Question:</label><br>
     <input type="text" id="question" name="question" required /><br><br>
 
-    <label>Location:</label><br>
-    <input type="text" id="location" name="location" readonly /><br><br>
-
-    <label>Local Time:</label><br>
-    <input type="text" id="localTime" name="localTime" readonly /><br><br>
+    <label>Horary Number (1–249):</label><br>
+    <input type="number" id="horary_number" name="horary_number" min="1" max="249" required /><br><br>
 
     <button type="submit">Get Guidance</button>
   </form>
@@ -24,52 +21,54 @@
   <div id="responseArea" style="margin-top:20px; white-space: pre-wrap;"></div>
 
   <script>
-    function getLocation() {
-      if (navigator.geolocation) {
+    async function getLocationData() {
+      return new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(async (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
+          const { latitude, longitude } = position.coords;
+          const timezoneOffset = new Date().getTimezoneOffset() / -60;
 
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
-          const data = await response.json();
-          document.getElementById("location").value = data.address.city || data.address.town || data.address.state || "Unknown";
-        });
-      } else {
-        document.getElementById("location").value = "Geolocation not supported";
-      }
+          resolve({ latitude, longitude, timezoneOffset });
+        }, reject);
+      });
     }
 
-    function getLocalTime() {
+    function formatDateTime() {
       const now = new Date();
-      document.getElementById("localTime").value = now.toLocaleString();
+      const date = now.toISOString().split("T")[0];
+      const time = now.toTimeString().split(" ")[0].slice(0, 5);
+      return { date, time };
     }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      getLocation();
-      getLocalTime();
-    });
 
     document.getElementById("predictionForm").addEventListener("submit", async function (e) {
       e.preventDefault();
 
       const question = document.getElementById("question").value;
-      const location = document.getElementById("location").value;
-      const localTime = document.getElementById("localTime").value;
+      const horary_number = parseInt(document.getElementById("horary_number").value);
+
+      const { date, time } = formatDateTime();
+      const { latitude, longitude, timezoneOffset } = await getLocationData();
+
+      const payload = {
+        question,
+        horary_number,
+        date,
+        time,
+        timezone_offset: timezoneOffset,
+        latitude,
+        longitude,
+        show_nakshatra: true,
+        show_sub_lord_index: true,
+        show_house_reasoning: true
+      };
 
       const response = await fetch("https://gurukp-love.onrender.com/predict", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ question, location, localTime })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
-      try {
-  const result = await response.json();
-  document.getElementById("responseArea").innerText = JSON.stringify(result, null, 2);
-} catch (err) {
-  document.getElementById("responseArea").innerText = "Failed to parse response. Check API.";
-  console.error("Response error:", err);
-}
+
+      const result = await response.json();
+      document.getElementById("responseArea").innerText = JSON.stringify(result, null, 2);
     });
   </script>
 </body>
